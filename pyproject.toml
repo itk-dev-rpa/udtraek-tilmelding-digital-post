@@ -18,6 +18,9 @@ classifiers = [
 dependencies = [
     "OpenOrchestrator == 1.*",
     "Pillow == 9.5.0",
+    "python-serviceplatformen == 1.*",
+    "itk_dev_shared_components == 2.*",
+    "openpyxl == 3.*",
 ]
 
 [project.optional-dependencies]
