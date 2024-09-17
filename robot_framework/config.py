@@ -25,3 +25,11 @@ QUEUE_NAME = None
 MAX_TASK_COUNT = 100
 
 # ----------------------
+
+# Process specific values
+GRAPH_API = "Graph API"
+MAIL_SOURCE_FOLDER = "Indbakke/Udtræk af Tilmelding til Digital Post"
+EMAIL_STATUS_SENDER = "itk-rpa@mkb.aarhus.dk"
+EMAIL_ATTACHMENT = "Tilmeldt Digital Post.xlsx"
+CERTIFICATE_DIR = "c:\\tmp\\serviceplatformen_test.pem"
+ACCESS_CVR = "55133018"
