@@ -4,10 +4,11 @@ import os
 import re
 import json
 from io import BytesIO
-from typing import Literal
+from typing import Literal, List
 
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+import concurrent.futures
 
 from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConnection
 from itk_dev_shared_components.graph import mail as graph_mail
@@ -46,7 +47,7 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         # graph_mail.delete_email(mail, graph_access)
 
 
-def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['digitalpost', 'nemsms', 'begge']) -> BytesIO:
+def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'Nem SMS', 'Begge']) -> BytesIO:
     """Read data from attachment, lookup each CPR number found and return a new file with added data.
 
     Args:
@@ -60,31 +61,56 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     input_sheet: Worksheet = workbook.active
 
     # Check which services are requested
-    check_digitalpost = service_type in ["digitalpost", "begge"]
-    check_sms = service_type in ["nemsms", "begge"]
+    service = ["Digital Post", "Nem SMS"] if service_type == "Begge" else [service_type]
 
     # Set column index to place sms as the last cell, even if there is no digital post cell and add column headers
-    new_column_index = input_sheet.max_column + 1 if check_digitalpost else input_sheet.max_column
-    if check_digitalpost:
-        input_sheet.cell(row=0, column=new_column_index, value="Digital post")
-    if check_sms:
-        input_sheet.cell(row=0, column=new_column_index + 1, value="Nem SMS")
-
-    # Write to all rows
+    for s in service:
+        input_sheet.cell(row=0, column=input_sheet.max_column + 1, value=s)
     iter_ = iter(input_sheet)
-    next(iter_)  # Skip header row
-    for row_idx, row in enumerate(iter_, start=2):
-        cpr = row[0].value
-        if check_digitalpost:
-            _write_registered_status(cpr, "digitalpost", input_sheet, row_idx, new_column_index, access)
-        if check_sms:
-            _write_registered_status(cpr, "nemsms", input_sheet, row_idx, new_column_index + 1, access)
+
+    # Call digital_post.is_registered for each input row and each required service
+    data = async_service_check(input_sheet, service, access)
 
     # Grab workbook from memory and return it
     byte_stream = BytesIO()
     workbook.save(byte_stream)
     byte_stream.seek(0)
     return byte_stream
+
+
+def async_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> Dict[str, List[str]]:
+    """
+    Call digital_post.is_registered for each input row and each required service.
+
+    Args:
+        input_sheet (Worksheet): The input worksheet containing rows of data.
+        service (List[str]): A list of services to check registration for.
+        kombit_access (KombitAccess): An object providing access credentials for the API.
+
+    Returns:
+        Dict[str, List[str]]: A dictionary with CPR as keys and lists of service registration results as values.
+    """
+    iter_ = iter(input_sheet)
+    next(iter_)  # Skip header row
+    data = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        all_futures = []
+        for row in iter_:
+            cpr = row[0].value  # Extract CPR from the row
+            for s in service:
+                serviceportal_type = s.replace(" ", "").lower()  # Format service name
+                # Submit the API call to the thread pool
+                future = executor.submit(digital_post.is_registered, cpr=cpr, service=serviceportal_type, kombit_access=kombit_access)
+                all_futures.append((cpr, future))
+
+        # Collect results as futures complete
+        for cpr, future in concurrent.futures.as_completed([f[1] for f in all_futures]):
+            if cpr not in data:
+                data[cpr] = []
+            data[cpr].append(future.result())  # Append the result to the corresponding CPR entry
+
+    return data
 
 
 def _write_registered_status(cpr: str, service: Literal["digitalpost", "nemsms"], target_sheet: Worksheet, row: int, column: int, kombit_access: KombitAccess):
