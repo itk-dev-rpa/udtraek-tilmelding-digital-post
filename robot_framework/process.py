@@ -63,13 +63,11 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     # Check which services are requested
     service = ["Digital Post", "Nem SMS"] if service_type == "Begge" else [service_type]
 
-    # Set column index to place sms as the last cell, even if there is no digital post cell and add column headers
-    for s in service:
-        input_sheet.cell(row=0, column=input_sheet.max_column + 1, value=s)
-    iter_ = iter(input_sheet)
-
     # Call digital_post.is_registered for each input row and each required service
     data = async_service_check(input_sheet, service, access)
+
+    # Add data to excel sheet
+    write_data_to_output_excel(service, data, input_sheet)
 
     # Grab workbook from memory and return it
     byte_stream = BytesIO()
@@ -78,7 +76,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     return byte_stream
 
 
-def async_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> Dict[str, List[str]]:
+def async_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, List[str]]:
     """
     Call digital_post.is_registered for each input row and each required service.
 
@@ -113,20 +111,28 @@ def async_service_check(input_sheet: Worksheet, service: List[str], kombit_acces
     return data
 
 
-def _write_registered_status(cpr: str, service: Literal["digitalpost", "nemsms"], target_sheet: Worksheet, row: int, column: int, kombit_access: KombitAccess):
-    """Check if the CPR is registered for a service and adds a cell to the provided sheet.
+def write_data_to_output_excel(service: list[str], data: dict[str, list[str]], target_sheet: Worksheet) -> None:
+    """ Add data to excel sheet
 
     Args:
-        cpr: The personal ID to lookup
-        service: Which service to lookup (digitalpost or nemsms)
-        target_sheet: The excel worksheet to modify
-        row, column: Target cell to add
-        kombit_access: Access token to use for connection
+        service: Which services we add a status for
+        data: A dictionary of id's with a list of booleans indicating if the id is registered with the service
+        target_sheet: A sheet with id's in the first row
 
+    Returns:
+        _description_
     """
-    is_registered = digital_post.is_registered(cpr=cpr, service=service, kombit_access=kombit_access)
-    status = "Tilmeldt" if is_registered else " Ikke tilmeldt"
-    target_sheet.cell(row=row, column=column, value=status)
+    # Write headers
+    for col, s in enumerate(service, start=target_sheet.max_column + 1):  # Start from column 2 to avoid overwriting ID column
+        target_sheet.cell(row=1, column=col, value=s)
+
+    # Add data
+    for row_idx, row in enumerate(target_sheet.iter_rows(min_row=2, max_col=1), start=2):
+        cpr = row[0].value
+        if cpr in data:
+            for col_idx, d in enumerate(data[cpr], start=2):
+                status = "Tilmeldt" if d else "Ikke tilmeldt"
+                target_sheet.cell(row=row_idx, column=col_idx, value=status)
 
 
 def _get_recipient_from_email(user_data: str) -> str:
