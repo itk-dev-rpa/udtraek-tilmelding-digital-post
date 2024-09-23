@@ -5,6 +5,7 @@ import re
 import json
 from io import BytesIO
 from typing import Literal, List
+import time
 
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
@@ -42,9 +43,11 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         requester = _get_recipient_from_email(mail.body)
         request_type = _get_request_type_from_email(mail.body)
         # Send and delete email
+        start_time = time.time()
         return_data = handle_data(email_attachment, kombit_access, request_type)
+        print(f"Total time spent: {time.time()-start_time} seconds")
         _send_status_email(requester, return_data)
-        # graph_mail.delete_email(mail, graph_access)
+        # graph_mail.delete_email(mail, graph_access)  # TODO
 
 
 def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'Nem SMS', 'Begge']) -> BytesIO:
@@ -65,6 +68,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
 
     # Call digital_post.is_registered for each input row and each required service
     data = async_service_check(input_sheet, service, access)
+    # data = linear_service_check(input_sheet, service, access)
 
     # Add data to excel sheet
     write_data_to_output_excel(service, data, input_sheet)
@@ -76,7 +80,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     return byte_stream
 
 
-def async_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, List[str]]:
+def async_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
     """
     Call digital_post.is_registered for each input row and each required service.
 
@@ -86,27 +90,56 @@ def async_service_check(input_sheet: Worksheet, service: List[str], kombit_acces
         kombit_access (KombitAccess): An object providing access credentials for the API.
 
     Returns:
-        Dict[str, List[str]]: A dictionary with CPR as keys and lists of service registration results as values.
+        dict[str, dist[str, bool]]: A dictionary with CPR as keys and lists of service registration results as values.
     """
     iter_ = iter(input_sheet)
     next(iter_)  # Skip header row
-    data = {}
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        all_futures = []
+    data = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        all_futures = {}
         for row in iter_:
             cpr = row[0].value  # Extract CPR from the row
             for s in service:
-                serviceportal_type = s.replace(" ", "").lower()  # Format service name
+                service_type = s.replace(" ", "").lower()  # Format service name
                 # Submit the API call to the thread pool
-                future = executor.submit(digital_post.is_registered, cpr=cpr, service=serviceportal_type, kombit_access=kombit_access)
-                all_futures.append((cpr, future))
+                future = executor.submit(digital_post.is_registered, cpr=cpr, service=service_type, kombit_access=kombit_access)
+                all_futures[future] = {"cpr": cpr, "service_type": service_type}
 
         # Collect results as futures complete
-        for cpr, future in concurrent.futures.as_completed([f[1] for f in all_futures]):
+        for future in concurrent.futures.as_completed(all_futures):
+            cpr = all_futures[future]["cpr"]
+            service_type = all_futures[future]["service_type"]
             if cpr not in data:
-                data[cpr] = []
-            data[cpr].append(future.result())  # Append the result to the corresponding CPR entry
+                data[cpr] = {}
+            data[cpr][service_type] = future.result()  # Add the result to the corresponding CPR/service_type entry
+    return data
+
+
+def linear_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
+    """
+    Call digital_post.is_registered for each input row and each required service.
+
+    Args:
+        input_sheet (Worksheet): The input worksheet containing rows of data.
+        service (List[str]): A list of services to check registration for.
+        kombit_access (KombitAccess): An object providing access credentials for the API.
+
+    Returns:
+        dict[str, dict[str, bool]]: A dictionary with CPR as keys and dictionary of service registration results as bools.
+    """
+    iter_ = iter(input_sheet)
+    next(iter_)  # Skip header row
+
+    data = {}
+    for row in iter_:
+        cpr = row[0].value  # Extract CPR from the row
+        for s in service:
+            serviceportal_type = s.replace(" ", "").lower()  # Format service name
+            result = digital_post.is_registered(cpr=cpr, service=serviceportal_type, kombit_access=kombit_access)
+            if cpr not in data:
+                data[cpr] = {}
+            data[cpr][serviceportal_type] = result
 
     return data
 
@@ -122,17 +155,18 @@ def write_data_to_output_excel(service: list[str], data: dict[str, list[str]], t
     Returns:
         _description_
     """
+    sheet_column_count = target_sheet.max_column
     # Write headers
-    for col, s in enumerate(service, start=target_sheet.max_column + 1):  # Start from column 2 to avoid overwriting ID column
+    for col, s in enumerate(service, start=sheet_column_count + 1):  # Start from column 2 to avoid overwriting ID column
+        # Write sheet headers for service types
         target_sheet.cell(row=1, column=col, value=s)
-
-    # Add data
-    for row_idx, row in enumerate(target_sheet.iter_rows(min_row=2, max_col=1), start=2):
-        cpr = row[0].value
-        if cpr in data:
-            for col_idx, d in enumerate(data[cpr], start=2):
-                status = "Tilmeldt" if d else "Ikke tilmeldt"
-                target_sheet.cell(row=row_idx, column=col_idx, value=status)
+        # Go through rows of the sheet
+        for row_idx, row in enumerate(target_sheet.iter_rows(min_row=2, max_col=1), start=2):
+            cpr = row[0].value
+            # Grab value of cpr-service_type from data dictionary and add to column
+            status = data[cpr][s.replace(" ", "").lower()]
+            status = "Tilmeldt" if status else "Ikke tilmeldt"
+            target_sheet.cell(row=row_idx, column=col, value=status)
 
 
 def _get_recipient_from_email(user_data: str) -> str:
@@ -144,7 +178,7 @@ def _get_recipient_from_email(user_data: str) -> str:
 def _get_request_type_from_email(user_data: str) -> str:
     """Find request type in user_data using regex."""
     pattern = r"Digital Post eller Nem SMS<br>([^<]+)"
-    return re.findall(pattern, user_data)[0].replace(" ", "").lower()
+    return re.findall(pattern, user_data)[0]
 
 
 def _send_status_email(recipient: str, file: BytesIO):
