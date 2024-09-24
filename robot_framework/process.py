@@ -47,7 +47,7 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         return_data = handle_data(email_attachment, kombit_access, request_type)
         print(f"Total time spent: {time.time()-start_time} seconds")
         _send_status_email(requester, return_data)
-        # graph_mail.delete_email(mail, graph_access)  # TODO
+        graph_mail.delete_email(mail, graph_access)
 
 
 def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'Nem SMS', 'Begge']) -> BytesIO:
@@ -67,7 +67,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     service = ["Digital Post", "Nem SMS"] if service_type == "Begge" else [service_type]
 
     # Call digital_post.is_registered for each input row and each required service
-    data = async_service_check(input_sheet, service, access)
+    data = threaded_service_check(input_sheet, service, access)
     # data = linear_service_check(input_sheet, service, access)
 
     # Add data to excel sheet
@@ -80,7 +80,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     return byte_stream
 
 
-def async_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
+def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
     """
     Call digital_post.is_registered for each input row and each required service.
 
