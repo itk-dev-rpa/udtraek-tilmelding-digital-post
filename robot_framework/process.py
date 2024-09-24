@@ -6,10 +6,10 @@ import json
 from io import BytesIO
 from typing import Literal, List
 import time
+import concurrent.futures
 
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
-import concurrent.futures
 
 from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConnection
 from itk_dev_shared_components.graph import mail as graph_mail
