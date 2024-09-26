@@ -25,7 +25,7 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
     """ Do the primary process of the robot."""
     orchestrator_connection.log_trace("Running process.")
     process_arguments = json.loads(orchestrator_connection.process_arguments)
-    service_cvr, certificate_dir = process_arguments["service_cvr"], process_arguments["certificate_dir"]
+    service_cvr, certificate_dir, thread_count = process_arguments["service_cvr"], process_arguments["certificate_dir"], process_arguments["thread_count"]
 
     # Prepare access to service platform
     kombit_access = KombitAccess(service_cvr, certificate_dir, False)
@@ -45,14 +45,14 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         request_type = _get_request_type_from_email(mail.body)
         # Send and delete email
         start_time = time.time()
-        return_data, rows_handled = handle_data(email_attachment, kombit_access, request_type)
+        return_data, rows_handled = handle_data(email_attachment, kombit_access, request_type, thread_count)
 
         orchestrator_connection.log_info(f"{rows_handled} Rows handled. Total time spent: {time.time()-start_time} seconds")
         _send_status_email(requester, return_data)
         graph_mail.delete_email(mail, graph_access)
 
 
-def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'NemSMS', 'Begge']) -> BytesIO:
+def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'NemSMS', 'Begge'], thread_count: int) -> BytesIO:
     """ Read data from attachment, lookup each CPR number found and return a new file with added data.
 
     Args:
@@ -69,7 +69,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     service = ["Digital Post", "NemSMS"] if service_type == "Begge" else [service_type]
 
     # Call digital_post.is_registered for each input row and each required service
-    data = threaded_service_check(input_sheet, service, access)
+    data = threaded_service_check(input_sheet, service, access, thread_count)
     # data = linear_service_check(input_sheet, service, access)
 
     # Add data to excel sheet
@@ -82,7 +82,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     return byte_stream, input_sheet.max_row
 
 
-def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
+def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess, thread_count: int) -> dict[str, dict[str, bool]]:
     """ Call digital_post.is_registered for each input row and each required service.
 
     Args:
@@ -97,7 +97,7 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
     next(iter_)  # Skip header row
 
     data = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
         all_futures = {}
         for row in iter_:
             cpr = row[0].value  # Extract CPR from the row
@@ -199,6 +199,6 @@ def _send_status_email(recipient: str, file: BytesIO):
 if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
-    vars = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem"}'
+    vars = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
     oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, vars)
     process(oc)
