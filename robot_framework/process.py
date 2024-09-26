@@ -22,17 +22,18 @@ from robot_framework import config
 
 
 def process(orchestrator_connection: OrchestratorConnection) -> None:
-    """Do the primary process of the robot."""
+    """ Do the primary process of the robot."""
     orchestrator_connection.log_trace("Running process.")
+    process_arguments = json.loads(orchestrator_connection.process_arguments)
+    service_cvr, certificate_dir = process_arguments["service_cvr"], process_arguments["certificate_dir"]
 
     # Prepare access to service platform
-    certificate_dir = config.CERTIFICATE_DIR
-    kombit_access = KombitAccess(config.ACCESS_CVR, certificate_dir, True)
+    kombit_access = KombitAccess(service_cvr, certificate_dir, False)
 
     # Prepare access to email
     graph_credentials = orchestrator_connection.get_credential(config.GRAPH_API)
     graph_access = graph_authentication.authorize_by_username_password(graph_credentials.username, **json.loads(graph_credentials.password))
-    mails = graph_mail.get_emails_from_folder(config.EMAIL_STATUS_SENDER, config.MAIL_SOURCE_FOLDER, graph_access)
+    mails = graph_mail.get_emails_from_folder(config.EMAIL_USER, config.MAIL_SOURCE_FOLDER, graph_access)
 
     for mail in mails:
         orchestrator_connection.log_trace("Reading emails.")
@@ -44,14 +45,15 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         request_type = _get_request_type_from_email(mail.body)
         # Send and delete email
         start_time = time.time()
-        return_data = handle_data(email_attachment, kombit_access, request_type)
-        print(f"Total time spent: {time.time()-start_time} seconds")
+        return_data, rows_handled = handle_data(email_attachment, kombit_access, request_type)
+
+        orchestrator_connection.log_info(f"{rows_handled} Rows handled. Total time spent: {time.time()-start_time} seconds")
         _send_status_email(requester, return_data)
         graph_mail.delete_email(mail, graph_access)
 
 
-def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'Nem SMS', 'Begge']) -> BytesIO:
-    """Read data from attachment, lookup each CPR number found and return a new file with added data.
+def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'NemSMS', 'Begge']) -> BytesIO:
+    """ Read data from attachment, lookup each CPR number found and return a new file with added data.
 
     Args:
         input_file: Excel-file with rows of CPR to work on
@@ -64,7 +66,7 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     input_sheet: Worksheet = workbook.active
 
     # Check which services are requested
-    service = ["Digital Post", "Nem SMS"] if service_type == "Begge" else [service_type]
+    service = ["Digital Post", "NemSMS"] if service_type == "Begge" else [service_type]
 
     # Call digital_post.is_registered for each input row and each required service
     data = threaded_service_check(input_sheet, service, access)
@@ -77,12 +79,11 @@ def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal
     byte_stream = BytesIO()
     workbook.save(byte_stream)
     byte_stream.seek(0)
-    return byte_stream
+    return byte_stream, input_sheet.max_row
 
 
 def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
-    """
-    Call digital_post.is_registered for each input row and each required service.
+    """ Call digital_post.is_registered for each input row and each required service.
 
     Args:
         input_sheet (Worksheet): The input worksheet containing rows of data.
@@ -117,8 +118,7 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
 
 
 def linear_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
-    """
-    Call digital_post.is_registered for each input row and each required service.
+    """ Call digital_post.is_registered for each input row and each required service.
 
     Args:
         input_sheet (Worksheet): The input worksheet containing rows of data.
@@ -144,16 +144,13 @@ def linear_service_check(input_sheet: Worksheet, service: List[str], kombit_acce
     return data
 
 
-def write_data_to_output_excel(service: list[str], data: dict[str, list[str]], target_sheet: Worksheet) -> None:
-    """ Add data to excel sheet
+def write_data_to_output_excel(service: list[str], data: dict[str, dict[str, bool]], target_sheet: Worksheet) -> None:
+    """ Add data to excel sheet.
 
     Args:
         service: Which services we add a status for
         data: A dictionary of id's with a list of booleans indicating if the id is registered with the service
         target_sheet: A sheet with id's in the first row
-
-    Returns:
-        _description_
     """
     sheet_column_count = target_sheet.max_column
     # Write headers
@@ -170,19 +167,19 @@ def write_data_to_output_excel(service: list[str], data: dict[str, list[str]], t
 
 
 def _get_recipient_from_email(user_data: str) -> str:
-    """Find email in user_data using regex."""
+    """ Find email in user_data using regex."""
     pattern = r"mailto:([^\"]+)"
     return re.findall(pattern, user_data)[0]
 
 
 def _get_request_type_from_email(user_data: str) -> str:
-    """Find request type in user_data using regex."""
-    pattern = r"Digital Post eller Nem SMS<br>([^<]+)"
+    """ Find request type in user_data using regex."""
+    pattern = r"Digital Post eller NemSMS<br>([^<]+)"
     return re.findall(pattern, user_data)[0]
 
 
 def _send_status_email(recipient: str, file: BytesIO):
-    """Send an email to the requesting party and to the controller.
+    """ Send an email to the requesting party and to the controller.
 
     Args:
         email: The email that has been processed.
@@ -202,5 +199,6 @@ def _send_status_email(recipient: str, file: BytesIO):
 if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
-    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, '')
+    vars = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem"}'
+    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, vars)
     process(oc)

@@ -14,22 +14,9 @@ SCREENSHOT_SENDER = "robot@friend.dk"
 # Constant/Credential names
 ERROR_EMAIL = "Error Email"
 
-
-# Queue specific configs
-# ----------------------
-
-# The name of the job queue (if any)
-QUEUE_NAME = None
-
-# The limit on how many queue elements to process
-MAX_TASK_COUNT = 100
-
-# ----------------------
-
 # Process specific values
 GRAPH_API = "Graph API"
 MAIL_SOURCE_FOLDER = "Indbakke/Udtræk af Tilmelding til Digital Post"
 EMAIL_STATUS_SENDER = "itk-rpa@mkb.aarhus.dk"
+EMAIL_USER = "itk-rpa@mkb.aarhus.dk"
 EMAIL_ATTACHMENT = "Tilmeldt Digital Post.xlsx"
-CERTIFICATE_DIR = "c:\\tmp\\serviceplatformen_test.pem"
-ACCESS_CVR = "55133018"
