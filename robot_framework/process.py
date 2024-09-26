@@ -199,6 +199,6 @@ def _send_status_email(recipient: str, file: BytesIO):
 if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
-    vars = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
-    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, vars)
+    process_variables = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
+    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, process_variables)
     process(oc)
