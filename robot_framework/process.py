@@ -28,7 +28,7 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
     service_cvr, certificate_dir, thread_count = process_arguments["service_cvr"], process_arguments["certificate_dir"], process_arguments["thread_count"]
 
     # Prepare access to service platform
-    kombit_access = KombitAccess(service_cvr, certificate_dir, False)
+    kombit_access = KombitAccess(service_cvr, certificate_dir, True)
 
     # Prepare access to email
     graph_credentials = orchestrator_connection.get_credential(config.GRAPH_API)
@@ -199,6 +199,6 @@ def _send_status_email(recipient: str, file: BytesIO):
 if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
-    process_variables = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
-    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, process_variables)
+    PROCESS_VARIABLES = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
+    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, PROCESS_VARIABLES)
     process(oc)
