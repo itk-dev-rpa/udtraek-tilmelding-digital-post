@@ -25,7 +25,7 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
     """ Do the primary process of the robot."""
     orchestrator_connection.log_trace("Running process.")
     process_arguments = json.loads(orchestrator_connection.process_arguments)
-    service_cvr, certificate_dir, thread_count = process_arguments["service_cvr"], process_arguments["certificate_dir"], process_arguments["thread_count"]
+    service_cvr, certificate_dir, thread_count = process_arguments["service_cvr"], process_arguments["certificate_path"], process_arguments["thread_count"]
 
     # Prepare access to service platform
     kombit_access = KombitAccess(service_cvr, certificate_dir, True)
@@ -52,7 +52,7 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         graph_mail.delete_email(mail, graph_access)
 
 
-def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'NemSMS', 'Begge'], thread_count: int) -> BytesIO:
+def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'NemSMS', 'Begge'], thread_count: int) -> tuple[BytesIO, int]:
     """ Read data from attachment, lookup each CPR number found and return a new file with added data.
 
     Args:
@@ -86,12 +86,12 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
     """ Call digital_post.is_registered for each input row and each required service.
 
     Args:
-        input_sheet (Worksheet): The input worksheet containing rows of data.
-        service (List[str]): A list of services to check registration for.
-        kombit_access (KombitAccess): An object providing access credentials for the API.
+        input_sheet: The input worksheet containing rows of data.
+        service: A list of services to check registration for.
+        kombit_access: An object providing access credentials for the API.
 
     Returns:
-        dict[str, dist[str, bool]]: A dictionary with CPR as keys and lists of service registration results as values.
+        A dictionary with CPR as keys and lists of service registration results as values.
     """
     iter_ = iter(input_sheet)
     next(iter_)  # Skip header row
@@ -121,12 +121,12 @@ def linear_service_check(input_sheet: Worksheet, service: List[str], kombit_acce
     """ Call digital_post.is_registered for each input row and each required service.
 
     Args:
-        input_sheet (Worksheet): The input worksheet containing rows of data.
-        service (List[str]): A list of services to check registration for.
-        kombit_access (KombitAccess): An object providing access credentials for the API.
+        input_sheet: The input worksheet containing rows of data.
+        service: A list of services to check registration for.
+        kombit_access: An object providing access credentials for the API.
 
     Returns:
-        dict[str, dict[str, bool]]: A dictionary with CPR as keys and dictionary of service registration results as bools.
+        A dictionary with CPR as keys and dictionary of service registration results as bools.
     """
     iter_ = iter(input_sheet)
     next(iter_)  # Skip header row
@@ -199,6 +199,6 @@ def _send_status_email(recipient: str, file: BytesIO):
 if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
-    PROCESS_VARIABLES = r'{"service_cvr":"55133018", "certificate_dir":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
+    PROCESS_VARIABLES = r'{"service_cvr":"55133018", "certificate_path":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
     oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, PROCESS_VARIABLES)
     process(oc)
