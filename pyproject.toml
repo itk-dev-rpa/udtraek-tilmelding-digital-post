@@ -21,6 +21,7 @@ dependencies = [
     "python-serviceplatformen == 1.*",
     "itk_dev_shared_components == 2.*",
     "openpyxl == 3.*",
+    "hvac == 2.*",
 ]
 
 [project.optional-dependencies]

@@ -8,8 +8,10 @@ from typing import Literal, List
 import time
 import concurrent.futures
 
+import hvac.api
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+import hvac
 
 from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConnection
 from itk_dev_shared_components.graph import mail as graph_mail
@@ -25,10 +27,24 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
     """ Do the primary process of the robot."""
     orchestrator_connection.log_trace("Running process.")
     process_arguments = json.loads(orchestrator_connection.process_arguments)
-    service_cvr, certificate_dir, thread_count = process_arguments["service_cvr"], process_arguments["certificate_path"], process_arguments["thread_count"]
+
+    # Access Keyvault
+    vault_auth = orchestrator_connection.get_credential("Keyvault")
+    vault_client = hvac.Client("https://vault.itkdev.dk/")
+    token = vault_client.auth.approle.login(role_id=vault_auth.username, secret_id=vault_auth.password)
+    vault_client.token = token['auth']['client_token']
+
+    # Get certificate
+    read_response = vault_client.secrets.kv.v2.read_secret_version(mount_point='rpa', path='Digital_Post_Ukendt_Adresse')
+    certificate = read_response['data']['data']['cert']
+
+    # Because KombitAccess requires a file, we save and delete the certificate after we use it
+    certificate_path = "certificate.pem"
+    with open(certificate_path, 'w', encoding='utf-8') as cert_file:
+        cert_file.write(certificate)
 
     # Prepare access to service platform
-    kombit_access = KombitAccess(service_cvr, certificate_dir, True)
+    kombit_access = KombitAccess(process_arguments["service_cvr"], certificate_path, False)
 
     # Prepare access to email
     graph_credentials = orchestrator_connection.get_credential(config.GRAPH_API)
@@ -45,11 +61,12 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         request_type = _get_request_type_from_email(mail.body)
         # Send and delete email
         start_time = time.time()
-        return_data, rows_handled = handle_data(email_attachment, kombit_access, request_type, thread_count)
+        return_data, rows_handled = handle_data(email_attachment, kombit_access, request_type, process_arguments["thread_count"])
 
         orchestrator_connection.log_info(f"{rows_handled} Rows handled. Total time spent: {time.time()-start_time} seconds")
         _send_status_email(requester, return_data)
         graph_mail.delete_email(mail, graph_access)
+    os.remove(certificate_path)
 
 
 def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'NemSMS', 'Begge'], thread_count: int) -> tuple[BytesIO, int]:
@@ -199,6 +216,6 @@ def _send_status_email(recipient: str, file: BytesIO):
 if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
-    PROCESS_VARIABLES = r'{"service_cvr":"55133018", "certificate_path":"c:\\tmp\\serviceplatformen_test.pem", "thread_count":1}'
+    PROCESS_VARIABLES = r'{"service_cvr":"55133018", "thread_count":1}'
     oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, PROCESS_VARIABLES)
     process(oc)
