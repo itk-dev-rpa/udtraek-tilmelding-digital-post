@@ -28,13 +28,14 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
     process_arguments = json.loads(orchestrator_connection.process_arguments)
 
     # Access Keyvault
-    vault_auth = orchestrator_connection.get_credential("Keyvault")
-    vault_client = Client("https://vault.itkdev.dk/")
+    vault_auth = orchestrator_connection.get_credential(config.KEYVAULT_CREDENTIALS)
+    vault_uri = orchestrator_connection.get_constant(config.KEYVAULT_URI)
+    vault_client = Client(vault_uri)
     token = vault_client.auth.approle.login(role_id=vault_auth.username, secret_id=vault_auth.password)
     vault_client.token = token['auth']['client_token']
 
     # Get certificate
-    read_response = vault_client.secrets.kv.v2.read_secret_version(mount_point='rpa', path='Digital_Post_Ukendt_Adresse')
+    read_response = vault_client.secrets.kv.v2.read_secret_version(mount_point='rpa', path=config.KEYVAULT_PATH)
     certificate = read_response['data']['data']['cert']
 
     # Because KombitAccess requires a file, we save and delete the certificate after we use it
@@ -65,7 +66,6 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         orchestrator_connection.log_info(f"{rows_handled} Rows handled. Total time spent: {time.time()-start_time} seconds")
         _send_status_email(requester, return_data)
         graph_mail.delete_email(mail, graph_access)
-    os.remove(certificate_path)
 
 
 def handle_data(input_file: BytesIO, access: KombitAccess, service_type: Literal['Digital Post', 'NemSMS', 'Begge'], thread_count: int) -> tuple[BytesIO, int]:
