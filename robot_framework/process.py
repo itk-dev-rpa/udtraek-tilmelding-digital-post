@@ -8,10 +8,10 @@ from typing import Literal, List
 import time
 import concurrent.futures
 
-import hvac.api
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 import hvac
+import hvac.api
 
 from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConnection
 from itk_dev_shared_components.graph import mail as graph_mail
