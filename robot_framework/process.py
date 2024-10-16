@@ -10,8 +10,7 @@ import concurrent.futures
 
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
-import hvac
-import hvac.api
+from hvac import Client
 
 from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConnection
 from itk_dev_shared_components.graph import mail as graph_mail
@@ -30,7 +29,7 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
 
     # Access Keyvault
     vault_auth = orchestrator_connection.get_credential("Keyvault")
-    vault_client = hvac.Client("https://vault.itkdev.dk/")
+    vault_client = Client("https://vault.itkdev.dk/")
     token = vault_client.auth.approle.login(role_id=vault_auth.username, secret_id=vault_auth.password)
     vault_client.token = token['auth']['client_token']
 
