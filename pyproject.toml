@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robot_framework"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
   { name="ITK Development", email="itk-rpa@mkb.aarhus.dk" },
 ]
@@ -21,6 +21,7 @@ dependencies = [
     "python-serviceplatformen == 1.*",
     "itk_dev_shared_components == 2.*",
     "openpyxl == 3.*",
+    "hvac == 2.*",
 ]
 
 [project.optional-dependencies]

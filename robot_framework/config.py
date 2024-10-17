@@ -13,6 +13,9 @@ SCREENSHOT_SENDER = "robot@friend.dk"
 
 # Constant/Credential names
 ERROR_EMAIL = "Error Email"
+KEYVAULT_CREDENTIALS = "Keyvault"
+KEYVAULT_URI = "Keyvault URI"
+KEYVAULT_PATH = "Digital_Post_Masseopslag"
 
 # Process specific values
 GRAPH_API = "Graph API"
