@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2024-10-21
+
+- Ensure that excel doesn't remove zeroes from CPR
+
 ## [1.1.0] - 2024-10-16
 
 - Implemented keyvault for certificate
@@ -15,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/itk-dev-rpa/udtraek-tilmelding-digital-post/compare/1.1.0...HEAD
+[Unreleased]: https://github.com/itk-dev-rpa/udtraek-tilmelding-digital-post/compare/1.2.0...HEAD
+[1.1.0]: https://github.com/itk-dev-rpa/udtraek-tilmelding-digital-post/releases/tag/1.2.0
 [1.1.0]: https://github.com/itk-dev-rpa/udtraek-tilmelding-digital-post/releases/tag/1.1.0
 [1.0.0]: https://github.com/itk-dev-rpa/udtraek-tilmelding-digital-post/releases/tag/1.0.0
