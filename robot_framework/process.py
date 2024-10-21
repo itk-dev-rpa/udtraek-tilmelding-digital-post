@@ -116,7 +116,9 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
         all_futures = {}
         for row in iter_:
-            cpr = row[0].value  # Extract CPR from the row
+            cpr = row[0].value.replace("-", "")  # Extract CPR from the row
+            if len(cpr) < 10:
+                cpr = "0" + cpr  # Add extra 0 if Excel removed it
             for s in service:
                 service_type = s.replace(" ", "").lower()  # Format service name
                 # Submit the API call to the thread pool
