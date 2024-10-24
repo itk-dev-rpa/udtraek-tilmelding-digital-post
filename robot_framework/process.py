@@ -116,7 +116,7 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
         all_futures = {}
         for row in iter_:
-            cpr = row[0].value.replace("-", "")  # Extract CPR from the row
+            cpr = str(row[0].value).replace("-", "")  # Extract CPR from the row
             if len(cpr) < 10:
                 cpr = "0" + cpr  # Add extra 0 if Excel removed it
             for s in service:
@@ -177,7 +177,7 @@ def write_data_to_output_excel(service: list[str], data: dict[str, dict[str, boo
         target_sheet.cell(row=1, column=col, value=s)
         # Go through rows of the sheet
         for row_idx, row in enumerate(target_sheet.iter_rows(min_row=2, max_col=1), start=2):
-            cpr = row[0].value
+            cpr = str(row[0].value).replace("-", "")
             # Grab value of cpr-service_type from data dictionary and add to column
             status = data[cpr][s.replace(" ", "").lower()]
             status = "Tilmeldt" if status else "Ikke tilmeldt"
