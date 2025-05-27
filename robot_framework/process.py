@@ -87,7 +87,6 @@ def handle_data(input_file: BytesIO, access: KombitAccess, orchestrator_connecti
 
     # Call digital_post.is_registered for each input row and each required service
     data = threaded_service_check(input_sheet, service, access, orchestrator_connection, thread_count)
-    # data = linear_service_check(input_sheet, service, access)
 
     # Add data to excel sheet
     write_data_to_output_excel(service, data, input_sheet)
@@ -118,57 +117,30 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
         all_futures = {}
         sent = 0
         for row in iter_:
-            cpr = str(row[0].value).replace("-", "")  # Extract CPR from the row
-            if len(cpr) < 10:
-                cpr = "0" + cpr  # Add extra 0 if Excel removed it
+            id_num = str(row[0].value).replace("-", "")  # Extract CPR from the row
+            if len(id_num) == 9:
+                id_num = "0" + id_num  # Add extra 0 if Excel removed it from a CPR
             for s in service:
                 service_type = s.replace(" ", "").lower()  # Format service name
                 # Submit the API call to the thread pool
-                future = executor.submit(digital_post.is_registered, cpr=cpr, service=service_type, kombit_access=kombit_access)
-                all_futures[future] = {"cpr": cpr, "service_type": service_type}
+                future = executor.submit(digital_post.is_registered, id_num=id_num, service=service_type, kombit_access=kombit_access)
+                all_futures[future] = {"cpr": id_num, "service_type": service_type}
             sent += 1
         received = 0
         # Collect results as futures complete
         for future in concurrent.futures.as_completed(all_futures):
-            cpr = all_futures[future]["cpr"]
+            id_num = all_futures[future]["cpr"]
             received += 1
-            orchestrator_connection.log_trace(f"Reply {received}/{sent} received for {cpr}")
+            orchestrator_connection.log_trace(f"Reply {received}/{sent} received for {id_num}")
             service_type = all_futures[future]["service_type"]
-            if cpr not in data:
-                data[cpr] = {}
+            if id_num not in data:
+                data[id_num] = {}
             try:
-                data[cpr][service_type] = future.result()  # Add the result to the corresponding CPR/service_type entry
+                data[id_num][service_type] = future.result()  # Add the result to the corresponding CPR/service_type entry
             except ReadTimeout:
-                data[cpr][service_type] = "ERROR: Timeout"
+                data[id_num][service_type] = "ERROR: Timeout"
             except HTTPError as e:
-                data[cpr][service_type] = f"ERROR: HTTP {e.errno}"
-    return data
-
-
-def linear_service_check(input_sheet: Worksheet, service: List[str], kombit_access: KombitAccess) -> dict[str, dict[str, bool]]:
-    """ Call digital_post.is_registered for each input row and each required service.
-
-    Args:
-        input_sheet: The input worksheet containing rows of data.
-        service: A list of services to check registration for.
-        kombit_access: An object providing access credentials for the API.
-
-    Returns:
-        A dictionary with CPR as keys and dictionary of service registration results as bools.
-    """
-    iter_ = iter(input_sheet)
-    next(iter_)  # Skip header row
-
-    data = {}
-    for row in iter_:
-        cpr = row[0].value  # Extract CPR from the row
-        for s in service:
-            serviceportal_type = s.replace(" ", "").lower()  # Format service name
-            result = digital_post.is_registered(cpr=cpr, service=serviceportal_type, kombit_access=kombit_access)
-            if cpr not in data:
-                data[cpr] = {}
-            data[cpr][serviceportal_type] = result
-
+                data[id_num][service_type] = f"ERROR: HTTP {e.errno}"
     return data
 
 
