@@ -127,8 +127,6 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
                 future = executor.submit(digital_post.is_registered, cpr=cpr, service=service_type, kombit_access=kombit_access)
                 all_futures[future] = {"cpr": cpr, "service_type": service_type}
             sent += 1
-            
-            print(f"Request {sent} for {cpr} sent")
         received = 0
         # Collect results as futures complete
         for future in concurrent.futures.as_completed(all_futures):
