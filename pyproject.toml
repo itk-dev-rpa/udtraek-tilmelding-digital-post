@@ -18,7 +18,7 @@ classifiers = [
 dependencies = [
     "OpenOrchestrator == 1.*",
     "Pillow == 9.5.0",
-    "python-serviceplatformen == 2.*",
+    "python-serviceplatformen == 3.*",
     "itk_dev_shared_components == 2.*",
     "openpyxl == 3.*",
     "hvac == 2.*",
