@@ -117,30 +117,30 @@ def threaded_service_check(input_sheet: Worksheet, service: List[str], kombit_ac
         all_futures = {}
         sent = 0
         for row in iter_:
-            id_num = str(row[0].value).replace("-", "")  # Extract CPR from the row
-            if len(id_num) == 9:
-                id_num = "0" + id_num  # Add extra 0 if Excel removed it from a CPR
+            id_ = str(row[0].value).replace("-", "")  # Extract CPR from the row
+            if len(id_) == 9:
+                id_ = "0" + id_  # Add extra 0 if Excel removed it from a CPR
             for s in service:
                 service_type = s.replace(" ", "").lower()  # Format service name
                 # Submit the API call to the thread pool
-                future = executor.submit(digital_post.is_registered, id_num=id_num, service=service_type, kombit_access=kombit_access)
-                all_futures[future] = {"cpr": id_num, "service_type": service_type}
+                future = executor.submit(digital_post.is_registered, id_=id_, service=service_type, kombit_access=kombit_access)
+                all_futures[future] = {"cpr": id_, "service_type": service_type}
             sent += 1
         received = 0
         # Collect results as futures complete
         for future in concurrent.futures.as_completed(all_futures):
-            id_num = all_futures[future]["cpr"]
+            id_ = all_futures[future]["cpr"]
             received += 1
-            orchestrator_connection.log_trace(f"Reply {received}/{sent} received for {id_num}")
+            orchestrator_connection.log_trace(f"Reply {received}/{sent} received for {id_}")
             service_type = all_futures[future]["service_type"]
-            if id_num not in data:
-                data[id_num] = {}
+            if id_ not in data:
+                data[id_] = {}
             try:
-                data[id_num][service_type] = future.result()  # Add the result to the corresponding CPR/service_type entry
+                data[id_][service_type] = future.result()  # Add the result to the corresponding CPR/service_type entry
             except ReadTimeout:
-                data[id_num][service_type] = "ERROR: Timeout"
+                data[id_][service_type] = "ERROR: Timeout"
             except HTTPError as e:
-                data[id_num][service_type] = f"ERROR: HTTP {e.errno}"
+                data[id_][service_type] = f"ERROR: HTTP {e.errno}"
     return data
 
 
