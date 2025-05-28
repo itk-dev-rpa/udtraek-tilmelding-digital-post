@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robot_framework"
-version = "1.2.1"
+version = "1.2.2"
 authors = [
   { name="ITK Development", email="itk-rpa@mkb.aarhus.dk" },
 ]
@@ -18,7 +18,7 @@ classifiers = [
 dependencies = [
     "OpenOrchestrator == 1.*",
     "Pillow == 9.5.0",
-    "python-serviceplatformen == 1.*",
+    "python-serviceplatformen == 3.*",
     "itk_dev_shared_components == 2.*",
     "openpyxl == 3.*",
     "hvac == 2.*",
