@@ -190,7 +190,7 @@ def _send_status_email(recipient: str, file: BytesIO):
         recipient,
         config.EMAIL_STATUS_SENDER,
         config.EMAIL_SUBJECT,
-        config.EMAIL_BODY[0],
+        config.EMAIL_BODY,
         config.SMTP_SERVER,
         config.SMTP_PORT,
         False,

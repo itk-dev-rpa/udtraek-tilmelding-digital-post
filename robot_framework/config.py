@@ -24,8 +24,8 @@ EMAIL_STATUS_SENDER = "itk-rpa@mkb.aarhus.dk"
 EMAIL_USER = "itk-rpa@mkb.aarhus.dk"
 EMAIL_ATTACHMENT = "Tilmeldt Digital Post.xlsx"
 EMAIL_SUBJECT = "RPA: Udtræk om Tilmelding til Digital Post"
-EMAIL_BODY = """"Robotten har nu udtrukket information om tilmelding til digital post for borgere med ukendt adresse.
+EMAIL_BODY = """Robotten har nu udtrukket information om tilmelding til digital post for borgere med ukendt adresse.
 
 Vedhæftet denne mail finder du et excel-ark, som indeholder CPR-numre på navngivne borgere, for hvem robotten har slået op i Serviceplatformen og fået svar på, om de er tilmeldt digital post.
 
-Mvh. ITK RPA","""
+Mvh. ITK RPA"""
