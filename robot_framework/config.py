@@ -29,6 +29,3 @@ EMAIL_BODY = """"Robotten har nu udtrukket information om tilmelding til digital
 Vedhæftet denne mail finder du et excel-ark, som indeholder CPR-numre på navngivne borgere, for hvem robotten har slået op i Serviceplatformen og fået svar på, om de er tilmeldt digital post.
 
 Mvh. ITK RPA","""
-SMS_TEXT = """Har du læst vores brev i din digitale postkasse vedrørende din bopælsregistrering? Du kan kontakte os på tlf. 89 40 41 60. Med venlig hilsen Aarhus Kommune.
-
-Did you read our letter in your public mailbox (borger.dk) regarding your residence registration? You can contact us at 89 40 41 60. Best regards Aarhus Kommune. """
