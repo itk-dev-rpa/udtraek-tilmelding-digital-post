@@ -189,8 +189,8 @@ def _send_status_email(recipient: str, file: BytesIO):
     smtp_util.send_email(
         recipient,
         config.EMAIL_STATUS_SENDER,
-        "RPA: Udtræk om Tilmelding til Digital Post",
-        "Robotten har nu udtrukket information om tilmelding til digital post i den forespurgte liste.\n\nVedhæftet denne mail finder du et excel-ark, som indeholder CPR-numre på navngivne borgere, for hvem robotten har slået op i Serviceplatformen og fået svar på, om de er tilmeldt digital post.\n\n Mvh. ITK RPA",
+        config.EMAIL_SUBJECT,
+        config.EMAIL_BODY,
         config.SMTP_SERVER,
         config.SMTP_PORT,
         False,
