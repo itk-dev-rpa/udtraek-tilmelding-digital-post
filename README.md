@@ -1,7 +1,7 @@
 # Udtræk af status på Tilmelding til Digital Post
 
 This robot reads a list of CPR and/or CVR sent from OS2forms and checks status for registration of DigitalPost and/or NemSMS.
-The result is sent as an XML to the requesting email.
+The result is sent as an Excel to the requesting email.
 
 ## Usage
 Enter data via OS2forms: https://selvbetjening.aarhuskommune.dk/da/form/rpa-udtraek-af-tilmelding-til-di
