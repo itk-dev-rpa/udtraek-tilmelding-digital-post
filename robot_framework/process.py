@@ -19,6 +19,7 @@ from itk_dev_shared_components.graph import authentication as graph_authenticati
 from itk_dev_shared_components.smtp import smtp_util
 from python_serviceplatformen import digital_post
 from python_serviceplatformen.authentication import KombitAccess
+import itk_dev_event_log
 
 from robot_framework import config
 
@@ -27,6 +28,9 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
     """ Do the primary process of the robot."""
     orchestrator_connection.log_trace("Running process.")
     process_arguments = json.loads(orchestrator_connection.process_arguments)
+
+    event_log = orchestrator_connection.get_constant("Event Log")
+    itk_dev_event_log.setup_logging(event_log.value)
 
     # Access Keyvault
     vault_auth = orchestrator_connection.get_credential(config.KEYVAULT_CREDENTIALS)
@@ -63,6 +67,8 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
         # Send and delete email
         start_time = time.time()
         return_data, rows_handled = handle_data(email_attachment, kombit_access, orchestrator_connection, request_type, process_arguments["thread_count"])
+
+        itk_dev_event_log.emit(orchestrator_connection.process_name, "Handled cases", rows_handled)
 
         orchestrator_connection.log_info(f"{rows_handled} Rows handled. Total time spent: {time.time()-start_time} seconds")
         _send_status_email(requester, return_data)
