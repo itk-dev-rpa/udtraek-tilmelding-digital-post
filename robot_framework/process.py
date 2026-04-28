@@ -1,6 +1,5 @@
 """This module contains the main process of the robot."""
 
-import os
 import re
 import json
 from io import BytesIO
