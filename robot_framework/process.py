@@ -208,5 +208,5 @@ if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
     PROCESS_VARIABLES = r'{"service_cvr":"55133018", "thread_count":1}'
-    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, PROCESS_VARIABLES, "")
+    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, PROCESS_VARIABLES, "", "")
     process(oc)
