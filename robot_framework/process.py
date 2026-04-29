@@ -1,6 +1,5 @@
 """This module contains the main process of the robot."""
 
-import os
 import re
 import json
 from io import BytesIO
@@ -202,11 +201,3 @@ def _send_status_email(recipient: str, file: BytesIO):
         False,
         [smtp_util.EmailAttachment(file, config.EMAIL_ATTACHMENT)]
     )
-
-
-if __name__ == '__main__':
-    conn_string = os.getenv("OpenOrchestratorConnString")
-    crypto_key = os.getenv("OpenOrchestratorKey")
-    PROCESS_VARIABLES = r'{"service_cvr":"55133018", "thread_count":1}'
-    oc = OrchestratorConnection("Udtræk Tilmelding Digital Post", conn_string, crypto_key, PROCESS_VARIABLES, "")
-    process(oc)
